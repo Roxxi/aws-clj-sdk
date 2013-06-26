@@ -169,18 +169,22 @@ Returns a reference to this transfer"))
   tm)
 
 
-(defmacro with-open-transfer
-  "Given a TransferManager, 
-perform transfers and wait until all transfers are completed,
-then shuts down"
-  [tm & body]  
-  `(loop [tm# ~tm
-          transfers# [~@body]]
-     (if (every? done? transfers#)
-       (shutdown-now tm#)
-       (do
-         (Thread/sleep 200)
-         (recur tm# transfers#)))))
+;; This doesn't really make much sense... in retrospect, but I want to
+;; keep it around for a while just incase I change my mind.
+;;
+;; (defmacro with-open-transfer
+;;   "Given a TransferManager, 
+;; perform transfers and wait until all transfers are completed,
+;; then shuts down"
+;;   [tm & body]  
+;;   `(loop [tm# ~tm
+;;           transfers# [~@body]]
+;;      (if (every? done? transfers#)
+;;        (shutdown-now tm#)
+;;        (do
+;;          (Thread/sleep 200)
+;;          (recur tm# transfers#)))))
+
 
 (def ^{:private true} progress-event=>keywd
   {ProgressEvent/CANCELED_EVENT_CODE :canceled
@@ -194,7 +198,7 @@ then shuts down"
 (defn- progress-event->keywd [event-code]  
   (get progress-event=>keywd event-code))
 
-(defmacro progress-listener
+(defmacro defprogress-listener
   "Macro to allow you to define a ProgressListener as though
 you were defining a function that takes the number of bytes
 transfered on the last event, as well as the event code,
@@ -207,7 +211,7 @@ mapped to particular keywords."
              (progress-event->keywd (.getEventCode event#))]
          ~@body))))
 
-(defmacro progress-change-listener
+(defmacro defprogress-change-listener
   "Like `progress-listener` but only performs body when an event change
 occurs"
   [[bytes-transfered-binding event-code-binding] & body]
