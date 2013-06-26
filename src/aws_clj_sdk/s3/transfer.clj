@@ -220,22 +220,3 @@ occurs"
  
 
 
-
-
-(import [com.amazonaws.services.s3 AmazonS3Client])
-
-
-(def client (AmazonS3Client. creds))
-(def pl (progress-change-listener [a b] (print-prim a) (print-expr b)))
-
-(comment
-  (let [tm (make-transfer-manager creds)]
-  (with-open-transfer tm pl
-    (download-directory tm "okl-bi" "yodaetl/resources" "/tmp/yoda-resources")))
-  )
-
-(comment
-  (let [tm (make-transfer-manager creds)]
-  (with-open-transfer tm pl
-    (download tm "okl-bi" "yodaetl/jobs/2013-06-20-16-38-16/denorm/part-m-00001.gz" "/tmp/test.gz")))
-  )
