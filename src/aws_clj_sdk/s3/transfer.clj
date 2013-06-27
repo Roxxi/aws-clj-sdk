@@ -1,18 +1,13 @@
 (ns aws-clj-sdk.s3.transfer
-  (:use clojure.java.io
-        roxxi.utils.print
-        roxxi.utils.collections)
-  (:import[com.amazonaws.auth AWSCredentials]
-          [com.amazonaws.services.s3 AmazonS3]
-          [com.amazonaws.services.s3.model
-           ProgressListener
-           ProgressEvent]
-          [com.amazonaws.services.s3.transfer
-           TransferManager
-           Transfer
-           Transfer$TransferState])
-  ;; for interactive development
-  (:require [aws-clj-sdk.auth.core :as auth]))
+  (:import [com.amazonaws.auth AWSCredentials]
+           [com.amazonaws.services.s3 AmazonS3]
+           [com.amazonaws.services.s3.model
+            ProgressListener
+            ProgressEvent]
+           [com.amazonaws.services.s3.transfer
+            TransferManager
+            Transfer
+            Transfer$TransferState]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -154,7 +149,9 @@ Returns a reference to this transfer"))
   (upload-directory [tm bucket dir-key-prefix local-dir recursive?]
     (.uploadDirectory tm bucket dir-key-prefix (fileify local-dir) recursive?))
   (upload-files [tm bucket dir-key-prefix local-dir files]
-    (.uploadFileList tm bucket dir-key-prefix (fileify local-dir) (seq->java-list (map fileify files))))
+    (.uploadFileList tm bucket dir-key-prefix
+                     (fileify local-dir)
+                     (seq->java-list (map fileify files))))
   S3TransferManager
   (shutdown-now [tm]
     (.shutdownNow tm)))
