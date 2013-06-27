@@ -138,8 +138,6 @@ Returns a reference to this transfer"))
        (.download tm get-obj-req (fileify file)))
     ([tm bucket key file]
        (.download tm bucket key (fileify file))))
-  ;; This method seems to leak threads. Should be used for short lived applications
-  ;; only.
   (download-directory
     [tm bucket-name key-prefix dest-dir]
     (.downloadDirectory tm bucket-name key-prefix (fileify dest-dir)))
