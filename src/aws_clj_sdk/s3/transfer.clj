@@ -1,4 +1,6 @@
-(ns aws-clj-sdk.s3.transfer
+(ns aws-clj-sdk.s3.transfer  
+  (:require [clojure.java.io :refer [file]])
+  (:require [roxxi.utils.collections :refer [seq->java-list]])
   (:import [com.amazonaws.auth AWSCredentials]
            [com.amazonaws.services.s3 AmazonS3]
            [com.amazonaws.services.s3.model

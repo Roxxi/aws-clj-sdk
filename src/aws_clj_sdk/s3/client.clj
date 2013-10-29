@@ -47,15 +47,21 @@ of the associated object in bytes."))
   (key [summary]
     "Gets the key under which this object is stored in Amazon S3."))
 
+(extend-type S3ObjectSummary
+  S3ObjSummary
+  (key [summary]
+    (.getKey summary)))
 
 (defrecord S3ObjectDescriptor [^S3ObjectSummary summary
                                ^ObjectMetadata metadata]
-  S3ObjSummary
+  S3ObjSummary ;; <- Note, this is our protocol
   (key [desc]
-    (.getKey summary))
+    (key summary))
   S3ObjectMetadata
   (content-length [desc]
     (.getContentLength metadata)))
+
+
 
 (defn make-s3-obj-desc [summary metadata]
   (S3ObjectDescriptor. summary metadata))
@@ -85,4 +91,3 @@ of the associated object in bytes."))
      (AmazonS3Client. credentials))
   ([^AWSCredentials credentials ^ClientConfiguration client-config]
      (AmazonS3Client. credentials client-config)))
-

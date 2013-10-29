@@ -5,5 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [com.amazonaws/aws-java-sdk "1.4.7"]
-                 [roxxi/clojure-common-utils "0.0.9"]]
-  :warn-on-reflection true)
+                 [roxxi/clojure-common-utils "0.0.13"]
+                 ;; Should move this to development dependencies later
+                 [clj-yaml "0.4.0"]]
+  :resource-paths ["conf"]
+  :warn-on-reflection false)

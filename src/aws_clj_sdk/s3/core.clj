@@ -93,6 +93,3 @@ files will not be redownloaded"
       (if (all-files-downloaded? s3client bucket prefix local-dir)
         :done
         (download-sync-files s3client bucket prefix local-path))))
-           
-
-
