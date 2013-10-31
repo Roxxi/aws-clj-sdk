@@ -102,19 +102,6 @@ files will not be redownloaded"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; # Upload town!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn upload-file! [s3client bucket key local-path]
-  (let [tm (t/make-transfer-manager s3client)]
-    (t/upload! tm bucket key local-path)))
-
-(defn upload-directory! [s3client bucket dir-key-prefix local-dir recursive?]
-  (let [tm (t/make-transfer-manager s3client)]
-    (t/upload-directory! tm bucket dir-key-prefix local-dir recursive?)))
-
-(defn upload-files! [s3client bucket dir-key-prefix local-dir files]
-  (let [tm (t/make-transfer-manager s3client)]
-    (t/upload-files! tm bucket dir-key-prefix local-dir files)))
-
-
 
 ;; ## This relies on the fact that the amazon api returns the
 ;; object-summaries in alphabetical order (which Amazon's api
@@ -138,7 +125,17 @@ bucket."
       true
       false)))
 
-(defn all-files-uploaded? [] nil)
+(defn upload-file! [s3client bucket key local-path]
+  (let [tm (t/make-transfer-manager s3client)]
+    (t/upload! tm bucket key local-path)))
+
+(defn upload-directory! [s3client bucket dir-key-prefix local-dir recursive?]
+  (let [tm (t/make-transfer-manager s3client)]
+    (t/upload-directory! tm bucket dir-key-prefix local-dir recursive?)))
+
+(defn upload-files! [s3client bucket dir-key-prefix local-dir files]
+  (let [tm (t/make-transfer-manager s3client)]
+    (t/upload-files! tm bucket dir-key-prefix local-dir files)))
 
 
 (defn upload-file-if-not-there! [s3client bucket key local-path]
@@ -147,6 +144,13 @@ local-file to the specified s3 bucket and key"
   (if (not (present-in-s3? s3client bucket key))
     (upload-file! s3client bucket key local-path)
     :no-need-to-upload))
+
+
+;; (defn upload-string-as-file! [s3client bucket key string]
+;;   "At the specified bucket/key, creates a file whose contents are 'string'"
+;;   (let [stream (input-stream string)]
+;;     (upload-file s3client bucket key stream)
+
 
 (defn upload-sync-file! [s3client bucket key local-path]
   "If the file already exists in s3 AND is the same number of bytes
@@ -160,9 +164,9 @@ overwriting) local-file to the specified s3 bucket and key"
       (upload-file! s3client bucket key local-path)
       :no-need-to-upload)))
 
-(defn upload-sync-files! [] nil)
-(defn upload-sync-directory! [] nil)
-;; (defn upload-string-as-file! [s3client bucket key string]
-;;   "At the specified bucket/key, creates a file whose contents are 'string'"
-;;   (let [stream (input-stream string)]
-;;     (upload-file s3client bucket key stream)
+
+;; (defn all-files-uploaded? [] nil)
+
+;; (defn upload-sync-files! [] nil)
+
+;; (defn upload-sync-directory! [s3client bucket ])
