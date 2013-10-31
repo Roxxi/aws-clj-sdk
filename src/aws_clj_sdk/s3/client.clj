@@ -84,6 +84,11 @@ of the associated object in bytes."))
         key-version-vec (map make-key-version key-vec)]
     (.withKeys del-req key-version-vec)))
 
+(defn object-summaries-from-object-listing [^ObjectListing listing]
+  "Gets the list of object summaries from the ObjectListing"
+    (.getObjectSummaries listing))
+
+
 (extend-type AmazonS3Client
   S3Client
   (object-metadata [s3c bucket-name key]
@@ -94,9 +99,9 @@ of the associated object in bytes."))
     (.listObjects s3c bucket-name prefix))
   (object-summaries [s3c bucket-name prefix]
     (let [^ObjectListing listing (list-objects s3c bucket-name prefix)]
-      (.getObjectSummaries listing)))
+      (object-summaries-from-object-listing listing)))
   (object-keys [s3c bucket-name prefix]
-    (map #(key %) (object-summaries s3c bucket-name prefix)))
+     (map #(key %) (object-summaries s3c bucket-name prefix)))
   (object-descriptors [s3c bucket-name prefix]
     (let [summaries (object-summaries s3c bucket-name prefix)]
       (map make-s3-obj-desc
@@ -118,5 +123,10 @@ of the associated object in bytes."))
 
 ;; ## See http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/index.html?com/amazonaws/services/s3/model/ListObjectsRequest.html
 
-(defn make-list-objects-request [bucket-name prefix marker delimiter max-keys]
+(defn make-list-objects-request [bucket-name prefix & {:keys [marker
+                                                              delimiter
+                                                              max-keys]
+                                                       :or {marker nil
+                                                            delimiter nil
+                                                            max-keys 1000}}]
   (ListObjectsRequest. bucket-name prefix marker delimiter (int max-keys)))

@@ -116,14 +116,11 @@ files will not be redownloaded"
 (defn present-in-s3? [s3client bucket key]
   "Answers the question, is there a value associated to 'key' in the given
 bucket."
-  (let [list-obj-req (c/make-list-objects-request bucket key nil nil 1)
+  (let [list-obj-req (c/make-list-objects-request bucket key :max-keys 1)
         list-obj (c/list-objects-by-request s3client list-obj-req)
-        obj-summaries (.getObjectSummaries list-obj)
-        obj-summary (first obj-summaries)
+        obj-summary (first (c/object-summaries-from-object-listing list-obj))
         returned-key (and obj-summary (c/key obj-summary))]
-    (if (= key returned-key)
-      true
-      false)))
+    (= key returned-key)))
 
 (defn upload-file! [s3client bucket key local-path]
   (let [tm (t/make-transfer-manager s3client)]

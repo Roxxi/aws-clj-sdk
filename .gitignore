@@ -14,4 +14,4 @@ pom.xml
 shouldn't actually check any configuration
 but we'll see...
 
-*.yml
+conf/*.yml
