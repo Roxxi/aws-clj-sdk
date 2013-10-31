@@ -6,7 +6,8 @@
         roxxi.utils.print
         roxxi.utils.collections)
   (:require [aws-clj-sdk.s3.transfer :as t]
-            [aws-clj-sdk.s3.client :as c]))
+            [aws-clj-sdk.s3.client :as c]
+            [aws-clj-sdk.s3.object :as obj]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -43,8 +44,8 @@
 and the same number of bytes have been downloaded as in S3"
   [s3client bucket prefix local-dir]
   (let [s3-file-descs (c/object-descriptors s3client bucket prefix)
-        s3-set (into #{} (map (comp filename c/key) s3-file-descs))
-        s3-size (apply + (map c/content-length s3-file-descs))
+        s3-set (into #{} (map (comp filename obj/key) s3-file-descs))
+        s3-size (apply + (map obj/content-length s3-file-descs))
         local-files (directory-contents local-dir)
         local-set (into #{} (map (comp filename absolute-path) local-files))
         local-size (apply + (map file-size local-files))]
@@ -58,7 +59,7 @@ and the same number of bytes have been downloaded as in S3"
 (defn- determine-missing-files [s3client bucket prefix local-dir]
   (let [s3-file-descs (c/object-descriptors s3client bucket prefix)
         s3-filename=>desc (extract-map s3-file-descs
-                                       :key-extractor (comp filename c/key))
+                                       :key-extractor (comp filename obj/key))
         lcl-filename=>size (extract-map (directory-contents local-dir)
                                         :key-extractor
                                         (comp filename absolute-path)
@@ -68,10 +69,10 @@ and the same number of bytes have been downloaded as in S3"
         ;; or if the file in S3 is bigger than the file here
         download? (fn download? [kv]
                     (or (nil? (lcl-filename=>size (key kv)))
-                        (> (c/content-length (val kv))
+                        (> (obj/content-length (val kv))
                            (lcl-filename=>size (key kv)))))
         s3-keys-to-download
-        (map #(c/key (val %)) (filter download? s3-filename=>desc))]
+        (map #(obj/key (val %)) (filter download? s3-filename=>desc))]
     s3-keys-to-download))
 
 (defn download-sync-files! [s3client bucket prefix local-path]
@@ -116,10 +117,10 @@ files will not be redownloaded"
 (defn present-in-s3? [s3client bucket key]
   "Answers the question, is there a value associated to 'key' in the given
 bucket."
-  (let [list-obj-req (c/make-list-objects-request bucket key :max-keys 1)
+  (let [list-obj-req (obj/make-list-objects-request bucket key :max-keys 1)
         list-obj (c/list-objects-by-request s3client list-obj-req)
-        obj-summary (first (c/object-summaries-from-object-listing list-obj))
-        returned-key (and obj-summary (c/key obj-summary))]
+        obj-summary (first (obj/object-summaries list-obj))
+        returned-key (and obj-summary (obj/key obj-summary))]
     (= key returned-key)))
 
 (defn upload-file! [s3client bucket key local-path]
@@ -156,7 +157,7 @@ overwriting) local-file to the specified s3 bucket and key"
   (let [object-descriptors (c/object-descriptors s3client bucket key)
         s3-file-desc (first object-descriptors)]
     (if (or (nil? s3-file-desc)
-            (not= (c/content-length s3-file-desc)
+            (not= (obj/content-length s3-file-desc)
                   (file-size (file local-path))))
       (upload-file! s3client bucket key local-path)
       :no-need-to-upload)))

@@ -3,6 +3,7 @@
             [aws-clj-sdk.s3.core :as s3]
             [aws-clj-sdk.s3.client :as s3c]
             [aws-clj-sdk.s3.transfer :as t]
+            [aws-clj-sdk.s3.object :as obj]
             [aws-clj-sdk.auth.core-test :as auth])
   (:use clojure.java.io
         clojure.test
@@ -24,10 +25,9 @@
   "okl-danger-dev-mhalverson")
 (def test-bucket (get-test-bucket-name))
 
-(defn- present? [file-name]
-  (s3/present-in-s3? s3client test-bucket file-name))
-(s3c/delete-objects! s3client test-bucket ["s3/file1.txt"
-                                                   "s3/file2.txt"])
+(defmacro present? [file-name]
+ `(s3/present-in-s3? s3client test-bucket ~file-name))
+
 (deftest present-in-s3?-test []
   (testing "non-existent file"
     (is (not (present? "non-existent-file"))))
@@ -154,14 +154,14 @@ the file doesn't change size in s3"
         (t/wait-for-completion upload1)
         (is (present? "file"))
         (is (= (s3/file-size (file file1))
-               (s3c/content-length (first (s3c/object-descriptors s3client test-bucket "file"))))))
+               (obj/content-length (first (s3c/object-descriptors s3client test-bucket "file"))))))
       (let [upload2 (s3/upload-file-if-not-there! s3client
                                                   test-bucket
                                                   "file"
                                                   file2)]
         (is (= upload2 :no-need-to-upload))
         (is (= (s3/file-size (file file1))
-               (s3c/content-length (first (s3c/object-descriptors s3client test-bucket "file")))))
+               (obj/content-length (first (s3c/object-descriptors s3client test-bucket "file")))))
         (is (not= (s3/file-size (file file1))
                   (s3/file-size (file file2)))))
       (finally
@@ -181,14 +181,14 @@ and it's a no-op"
         (t/wait-for-completion upload1)
         (is (present? "file"))
         (is (= (s3/file-size (file file1))
-               (s3c/content-length (first (s3c/object-descriptors s3client test-bucket "file"))))))
+               (obj/content-length (first (s3c/object-descriptors s3client test-bucket "file"))))))
       (let [upload2 (s3/upload-sync-file! s3client
                                                   test-bucket
                                                   "file"
                                                   file2)]
         (t/wait-for-completion upload2)
         (is (= (s3/file-size (file file2))
-               (s3c/content-length (first (s3c/object-descriptors s3client test-bucket "file")))))
+               (obj/content-length (first (s3c/object-descriptors s3client test-bucket "file")))))
         (is (not= (s3/file-size (file file1))
                   (s3/file-size (file file2)))))
       (let [upload3 (s3/upload-sync-file! s3client
@@ -198,4 +198,3 @@ and it's a no-op"
         (is (= upload3 :no-need-to-upload)))
       (finally
         (s3c/delete-object! s3client test-bucket "file")))))
-

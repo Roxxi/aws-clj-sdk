@@ -7,13 +7,11 @@
            [com.amazonaws.services.s3 AmazonS3Client]
            [com.amazonaws.services.s3.model
             ObjectListing
-            ObjectMetadata
-            S3ObjectSummary
-            ListObjectsRequest
             DeleteObjectsRequest
             DeleteObjectsRequest$KeyVersion])
   ;; for interactive development
-  (:require [aws-clj-sdk.auth.core :as auth]))
+  (:require [aws-clj-sdk.auth.core :as auth]
+            [aws-clj-sdk.s3.object :as obj]))
 
 
 ;; For now, I'm just going to implement the functions I'm actually going
@@ -49,44 +47,15 @@ object stored in the S3 bucket.")
 from the specified bucket."))
 
 
-(defprotocol S3ObjectMetadata
-  (content-length [md]
-        "Gets the Content-Length HTTP header indicating the size
-of the associated object in bytes."))
 
-(defprotocol S3ObjSummary
-  (key [summary]
-    "Gets the key under which this object is stored in Amazon S3."))
-
-(extend-type S3ObjectSummary
-  S3ObjSummary
-  (key [summary]
-    (.getKey summary)))
-
-(defrecord S3ObjectDescriptor [^S3ObjectSummary summary
-                               ^ObjectMetadata metadata]
-  S3ObjSummary ;; <- Note, this is our protocol
-  (key [desc]
-    (key summary))
-  S3ObjectMetadata
-  (content-length [desc]
-    (.getContentLength metadata)))
-
-(defn make-s3-obj-desc [summary metadata]
-  (S3ObjectDescriptor. summary metadata))
-
-
-(defn make-key-version [key]
+(defn- make-key-version [key]
  (DeleteObjectsRequest$KeyVersion. key))
 
-(defn make-delete-objects-request [bucket-name key-vec]
+(defn- make-delete-objects-request [bucket-name key-vec]
   (let [del-req (DeleteObjectsRequest. bucket-name)
         key-version-vec (map make-key-version key-vec)]
     (.withKeys del-req key-version-vec)))
 
-(defn object-summaries-from-object-listing [^ObjectListing listing]
-  "Gets the list of object summaries from the ObjectListing"
-    (.getObjectSummaries listing))
 
 
 (extend-type AmazonS3Client
@@ -99,15 +68,15 @@ of the associated object in bytes."))
     (.listObjects s3c bucket-name prefix))
   (object-summaries [s3c bucket-name prefix]
     (let [^ObjectListing listing (list-objects s3c bucket-name prefix)]
-      (object-summaries-from-object-listing listing)))
+      (obj/object-summaries listing)))
   (object-keys [s3c bucket-name prefix]
-     (map #(key %) (object-summaries s3c bucket-name prefix)))
+     (map #(obj/key %) (object-summaries s3c bucket-name prefix)))
   (object-descriptors [s3c bucket-name prefix]
     (let [summaries (object-summaries s3c bucket-name prefix)]
-      (map make-s3-obj-desc
+      (map obj/make-s3-obj-desc
            summaries
            (map #(object-metadata s3c bucket-name %)
-                (map #(key %) summaries)))))
+                (map #(obj/key %) summaries)))))
   (delete-object! [s3c bucket-name key]
     (delete-objects! s3c bucket-name [key]))
   (delete-objects! [s3c bucket-name key-vector]
@@ -122,11 +91,3 @@ of the associated object in bytes."))
      (AmazonS3Client. credentials client-config)))
 
 ;; ## See http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/index.html?com/amazonaws/services/s3/model/ListObjectsRequest.html
-
-(defn make-list-objects-request [bucket-name prefix & {:keys [marker
-                                                              delimiter
-                                                              max-keys]
-                                                       :or {marker nil
-                                                            delimiter nil
-                                                            max-keys 1000}}]
-  (ListObjectsRequest. bucket-name prefix marker delimiter (int max-keys)))
