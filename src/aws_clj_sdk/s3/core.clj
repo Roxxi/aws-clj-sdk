@@ -1,4 +1,6 @@
 (ns aws-clj-sdk.s3.core
+  {:author "Alex Bahouth, Matt Halverson"
+   :date "10/29/2013"}
   (:use clojure.java.io
         [clojure.set :only [difference]]
         roxxi.utils.print
@@ -32,7 +34,9 @@
 
 
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; # Download town!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn all-files-downloaded?
   "True, if all files are present in the local directory that are listed in S3,
@@ -47,9 +51,9 @@ and the same number of bytes have been downloaded as in S3"
     (and (empty? (difference s3-set local-set))
          (= s3-size local-size))))
 
-(defn download-directory [s3client bucket prefix local-path]
+(defn download-directory! [s3client bucket prefix local-path]
   (let [tm (t/make-transfer-manager s3client)]
-    (t/download-directory tm bucket prefix local-path)))
+    (t/download-directory! tm bucket prefix local-path)))
 
 (defn- determine-missing-files [s3client bucket prefix local-dir]
   (let [s3-file-descs (c/object-descriptors s3client bucket prefix)
@@ -62,7 +66,7 @@ and the same number of bytes have been downloaded as in S3"
         ;; redownload the file
         ;; if we haven't yet downloaded a file that's in s3
         ;; or if the file in S3 is bigger than the file here
-        download? (fn download? [kv]                   
+        download? (fn download? [kv]
                     (or (nil? (lcl-filename=>size (key kv)))
                         (> (c/content-length (val kv))
                            (lcl-filename=>size (key kv)))))
@@ -70,26 +74,95 @@ and the same number of bytes have been downloaded as in S3"
         (map #(c/key (val %)) (filter download? s3-filename=>desc))]
     s3-keys-to-download))
 
-(defn download-sync-files [s3client bucket prefix local-path]
+(defn download-sync-files! [s3client bucket prefix local-path]
   (let [s3-files-to-download (determine-missing-files
                               s3client bucket prefix (directory (str local-path "/" prefix)))
-        tm (t/make-transfer-manager s3client)]    
-    (map #(t/download tm bucket % (file (str local-path "/" %)))
+        tm (t/make-transfer-manager s3client)]
+    (map #(t/download! tm bucket % (file (str local-path "/" %)))
          s3-files-to-download)))
 
 
 
-(defn download-sync-directory
-  "Download all the files in a particular s3 bucket/path if they 
+(defn download-sync-directory!
+  "Download all the files in a particular s3 bucket/path if they
 haven't already been completely downloaded.
 
-Useful if a connection is faulty or interrupted, because completed 
+Useful if a connection is faulty or interrupted, because completed
 files will not be redownloaded"
   [s3client bucket path local-path & {:keys [file-prefix]}]
   (let [local-dir (directory (str local-path "/" path))
         prefix (if file-prefix (str path "/" file-prefix) path)]
     (if (empty-directory? local-dir)
-      (download-directory s3client bucket prefix local-path))
+      (download-directory! s3client bucket prefix local-path))
       (if (all-files-downloaded? s3client bucket prefix local-dir)
         :done
-        (download-sync-files s3client bucket prefix local-path))))
+        (download-sync-files! s3client bucket prefix local-path))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; # Upload town!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn upload-file! [s3client bucket key local-path]
+  (let [tm (t/make-transfer-manager s3client)]
+    (t/upload! tm bucket key local-path)))
+
+(defn upload-directory! [s3client bucket dir-key-prefix local-dir recursive?]
+  (let [tm (t/make-transfer-manager s3client)]
+    (t/upload-directory! tm bucket dir-key-prefix local-dir recursive?)))
+
+(defn upload-files! [s3client bucket dir-key-prefix local-dir files]
+  (let [tm (t/make-transfer-manager s3client)]
+    (t/upload-files! tm bucket dir-key-prefix local-dir files)))
+
+
+
+;; ## This relies on the fact that the amazon api returns the
+;; object-summaries in alphabetical order (which Amazon's api
+;; does guarantee).
+;;
+;; Two cases:
+;;   key doesn't exist in the bucket
+;;   key exists
+;; but it's complicated by the fact that prefix-matching can occur
+;; e.g. okl-danger/yodaetl is not a key, but it prefix-matches things
+;; that are.
+(defn present-in-s3? [s3client bucket key]
+  "Answers the question, is there a value associated to 'key' in the given
+bucket."
+  (let [list-obj-req (c/make-list-objects-request bucket key nil nil 1)
+        list-obj (c/list-objects-by-request s3client list-obj-req)
+        obj-summaries (.getObjectSummaries list-obj)
+        obj-summary (first obj-summaries)
+        returned-key (and obj-summary (c/key obj-summary))]
+    (if (= key returned-key)
+      true
+      false)))
+
+(defn all-files-uploaded? [] nil)
+
+
+(defn upload-file-if-not-there! [s3client bucket key local-path]
+  "If the file already exists in s3, this is a no-op. Otherwise, uploads
+local-file to the specified s3 bucket and key"
+  (if (not (present-in-s3? s3client bucket key))
+    (upload-file! s3client bucket key local-path)
+    :no-need-to-upload))
+
+(defn upload-sync-file! [s3client bucket key local-path]
+  "If the file already exists in s3 AND is the same number of bytes
+as the file at local-path, this is a no-op. Otherwise, uploads (possibly
+overwriting) local-file to the specified s3 bucket and key"
+  (let [object-descriptors (c/object-descriptors s3client bucket key)
+        s3-file-desc (first object-descriptors)]
+    (if (or (nil? s3-file-desc)
+            (not= (c/content-length s3-file-desc)
+                  (file-size (file local-path))))
+      (upload-file! s3client bucket key local-path)
+      :no-need-to-upload)))
+
+(defn upload-sync-files! [] nil)
+(defn upload-sync-directory! [] nil)
+;; (defn upload-string-as-file! [s3client bucket key string]
+;;   "At the specified bucket/key, creates a file whose contents are 'string'"
+;;   (let [stream (input-stream string)]
+;;     (upload-file s3client bucket key stream)

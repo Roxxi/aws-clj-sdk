@@ -9,4 +9,4 @@
                  ;; Should move this to development dependencies later
                  [clj-yaml "0.4.0"]]
   :resource-paths ["conf"]
-  :warn-on-reflection false)
+  :warn-on-reflection true)

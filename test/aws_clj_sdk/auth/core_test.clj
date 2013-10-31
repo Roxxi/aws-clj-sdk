@@ -6,5 +6,5 @@
 
 (defn make-creds-from-file [credential-file]
   (let [config (yaml/parse-string (slurp credential-file))]
-    (auth/make-credentials (:access-key (:aws config)) 
+    (auth/make-credentials (:access-key (:aws config))
                            (:secret-key (:aws config)))))

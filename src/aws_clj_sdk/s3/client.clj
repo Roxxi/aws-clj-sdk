@@ -6,9 +6,12 @@
            [com.amazonaws.auth AWSCredentials]
            [com.amazonaws.services.s3 AmazonS3Client]
            [com.amazonaws.services.s3.model
-           ObjectListing
-           ObjectMetadata
-           S3ObjectSummary])
+            ObjectListing
+            ObjectMetadata
+            S3ObjectSummary
+            ListObjectsRequest
+            DeleteObjectsRequest
+            DeleteObjectsRequest$KeyVersion])
   ;; for interactive development
   (:require [aws-clj-sdk.auth.core :as auth]))
 
@@ -24,6 +27,9 @@
   (object-metadata [s3c bucket-name key]
     "Gets the metadata for the specified Amazon S3
 object without actually fetching the object itself.")
+  (list-objects-by-request [s3c list-objects-request]
+    "Returns a list of summary information about the objects in
+the given list-objects-request.")
   (list-objects [s3c bucket-name prefix]
     "Returns a list of summary information about the objects in
 the specified bucket.")
@@ -35,7 +41,12 @@ stored in the S3 bucket.")
 in the S3 bucket.")
   (object-descriptors [s3c bucket-name prefix]
     "Returns a collection of object-metadata corresponding to each
-object stored in the S3 bucket."))
+object stored in the S3 bucket.")
+  (delete-object! [s3c bucket-name key]
+    "Deletes the specified key from the specified bucket.")
+  (delete-objects! [s3c bucket-name key-vector]
+    "Deletes every key in the specified vector of keys
+from the specified bucket."))
 
 
 (defprotocol S3ObjectMetadata
@@ -61,16 +72,24 @@ of the associated object in bytes."))
   (content-length [desc]
     (.getContentLength metadata)))
 
-
-
 (defn make-s3-obj-desc [summary metadata]
   (S3ObjectDescriptor. summary metadata))
 
+
+(defn make-key-version [key]
+ (DeleteObjectsRequest$KeyVersion. key))
+
+(defn make-delete-objects-request [bucket-name key-vec]
+  (let [del-req (DeleteObjectsRequest. bucket-name)
+        key-version-vec (map make-key-version key-vec)]
+    (.withKeys del-req key-version-vec)))
 
 (extend-type AmazonS3Client
   S3Client
   (object-metadata [s3c bucket-name key]
     (.getObjectMetadata s3c bucket-name key))
+  (list-objects-by-request [s3c list-objects-request]
+    (.listObjects s3c list-objects-request))
   (list-objects [s3c bucket-name prefix]
     (.listObjects s3c bucket-name prefix))
   (object-summaries [s3c bucket-name prefix]
@@ -83,7 +102,12 @@ of the associated object in bytes."))
       (map make-s3-obj-desc
            summaries
            (map #(object-metadata s3c bucket-name %)
-                (map #(key %) summaries))))))
+                (map #(key %) summaries)))))
+  (delete-object! [s3c bucket-name key]
+    (delete-objects! s3c bucket-name [key]))
+  (delete-objects! [s3c bucket-name key-vector]
+    (let [delete-req (make-delete-objects-request bucket-name key-vector)]
+      (.deleteObjects s3c delete-req))))
 
 
 (defn make-s3-client
@@ -91,3 +115,8 @@ of the associated object in bytes."))
      (AmazonS3Client. credentials))
   ([^AWSCredentials credentials ^ClientConfiguration client-config]
      (AmazonS3Client. credentials client-config)))
+
+;; ## See http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/index.html?com/amazonaws/services/s3/model/ListObjectsRequest.html
+
+(defn make-list-objects-request [bucket-name prefix marker delimiter max-keys]
+  (ListObjectsRequest. bucket-name prefix marker delimiter (int max-keys)))
