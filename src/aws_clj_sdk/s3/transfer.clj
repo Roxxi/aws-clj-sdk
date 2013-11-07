@@ -1,16 +1,18 @@
 (ns aws-clj-sdk.s3.transfer
   (:require [clojure.java.io :refer [file]])
   (:require [roxxi.utils.collections :refer [seq->java-list]])
-  (:import [com.amazonaws.auth AWSCredentials]
+  (:use roxxi.utils.common)
+  (:import [java.io ByteArrayInputStream]
+           [com.amazonaws.auth AWSCredentials]
            [com.amazonaws.services.s3 AmazonS3]
            [com.amazonaws.services.s3.model
+            ObjectMetadata
             ProgressListener
             ProgressEvent]
            [com.amazonaws.services.s3.transfer
             TransferManager
             Transfer
             Transfer$TransferState]))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; # Protocols
@@ -20,8 +22,7 @@
   (download! [_ bucket key file]
     "Schedules a new transfer to download data from Amazon S3
 and save it to the specified file.")
-  (download-directory!
-    [_ bucket-name key-prefix dest-dir]
+  (download-directory! [_ bucket-name key-prefix dest-dir]
     "Downloads all objects in the virtual directory
 designated by the keyPrefix given to the destination directory given."))
 
@@ -29,6 +30,8 @@ designated by the keyPrefix given to the destination directory given."))
   (upload! [_ bucket key file]
     "Uploads all files in the directory given to the bucket named,
 optionally recursing for all subdirectories.")
+  (upload-string-as-file! [_ bucket key string]
+    "Uploads the string to the bucket at the specified key.")
   (upload-directory! [_ bucket dir-key-prefix local-dir recursive?]
     "Schedules a new transfer to upload data to Amazon S3.")
   (upload-files! [_ bucket dir-key-prefix local-dir files]
@@ -82,7 +85,7 @@ Returns a reference to this transfer"))
 ;; ## Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- fileify [file-or-path]
+(defn fileify [file-or-path]
   (if (string? file-or-path)
     (file file-or-path)
     file-or-path))
@@ -90,7 +93,7 @@ Returns a reference to this transfer"))
 (defn- transfer-progress [^Transfer t]
   (.getProgress t))
 
-(def ^{:private true} state=>keywd
+(def- state=>keywd
   {Transfer$TransferState/Canceled :canceled
    Transfer$TransferState/Completed :completed
    Transfer$TransferState/Failed :failed
@@ -98,7 +101,7 @@ Returns a reference to this transfer"))
    Transfer$TransferState/Waiting :waiting})
 
 ;; n.b. see http://grammarist.com/spelling/cancel/
-(def ^{:private true} keywd=>state
+(def- keywd=>state
   {:cancelled Transfer$TransferState/Canceled
    :canceled Transfer$TransferState/Canceled
    :completed Transfer$TransferState/Completed
@@ -108,7 +111,6 @@ Returns a reference to this transfer"))
 
 (defn- transfer-state->keywd [state]
   (get state=>keywd state))
-
 
 (extend-type Transfer
   S3Transfer
@@ -146,12 +148,23 @@ Returns a reference to this transfer"))
   S3Uploader
   (upload! [tm bucket key file]
     (.upload tm bucket key (fileify file)))
-  (upload-directory! [tm bucket dir-key-prefix local-dir recursive?]
-    (.uploadDirectory tm bucket dir-key-prefix (fileify local-dir) recursive?))
-  (upload-files! [tm bucket dir-key-prefix local-dir files]
-    (.uploadFileList tm bucket dir-key-prefix
-                     (fileify local-dir)
-                     (seq->java-list (map (comp fileify (partial str local-dir)) files))))
+  (upload-string-as-file! [tm bucket key ^String string]
+    (let [input-stream (ByteArrayInputStream. (.getBytes string "UTF-8"))
+          str-len (long (count string))
+          metadata (doto (ObjectMetadata. ) (.setContentLength str-len))]
+      (.upload tm bucket key input-stream metadata)))
+  (upload-directory! [tm bucket key-prefix local-dir recursive?]
+    (.uploadDirectory tm
+                      bucket
+                      key-prefix
+                      (fileify local-dir)
+                      recursive?))
+  (upload-files! [tm bucket key-prefix local-base-dir files]
+    (.uploadFileList tm
+                     bucket
+                     key-prefix
+                     (fileify local-base-dir)
+                     (map fileify files)))
   S3TransferManager
   (shutdown-now! [tm]
     (.shutdownNow tm)))
@@ -182,7 +195,7 @@ Returns a reference to this transfer"))
 ;;          (recur tm# transfers#)))))
 
 
-(def ^{:private true} progress-event=>keywd
+(def- progress-event=>keywd
   {ProgressEvent/CANCELED_EVENT_CODE :canceled
    ProgressEvent/COMPLETED_EVENT_CODE :completed
    ProgressEvent/FAILED_EVENT_CODE :failed

@@ -10,8 +10,7 @@
             DeleteObjectsRequest
             DeleteObjectsRequest$KeyVersion])
   ;; for interactive development
-  (:require [aws-clj-sdk.auth.core :as auth]
-            [aws-clj-sdk.s3.object :as obj]))
+  (:require [aws-clj-sdk.s3.object :as obj]))
 
 
 ;; For now, I'm just going to implement the functions I'm actually going
