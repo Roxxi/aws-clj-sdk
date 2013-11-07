@@ -5,4 +5,3 @@
 
 (defn make-credentials [access-key secret-key]
   (BasicAWSCredentials. access-key secret-key))
-

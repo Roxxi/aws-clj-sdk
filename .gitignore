@@ -1,0 +1,17 @@
+#Clojure
+
+pom.xml
+*jar
+/lib/
+/classes/
+/targets/
+.lein-deps-sum
+
+# Phabricator
+.arcrc
+
+# This really should be a pure library,
+shouldn't actually check any configuration
+but we'll see...
+
+conf/*.yml
