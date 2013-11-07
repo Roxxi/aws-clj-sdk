@@ -1,4 +1,4 @@
-(defproject roxxi/aws-clj-sdk "0.1.0"
+(defproject roxxi/aws-clj-sdk "0.1.1"
   :description "Clojure Wrapper around Amazon AWS Java SDK"
   :url "http://github.com/Roxxi/aws-clj-sdk"
   :license {:name "Eclipse Public License"
