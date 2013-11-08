@@ -117,7 +117,11 @@ Otherwise, false."
 ;;; # Download town!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; ## Forceful (over-writing) downloads
+(defn get-file-contents [s3client bucket key]
+  "Get the file corresponding to key, and return the body of the file"
+  (c/object-contents s3client bucket key))
+
+;; ## forceful (over-writing) downloads
 
 (defn download-files! [s3client bucket key-prefix local-dir-path]
   "For the set of files in s3 that prefix-match against key-prefix,

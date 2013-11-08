@@ -49,6 +49,25 @@
 ;; # Download tests!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(deftest get-file-contents-test []
+  (testing "put a file in s3, get the file contents, and it should be equal to
+the contents of the file"
+    (try
+      (let [upload (s3/upload-file! s3client
+                                    test-bucket
+                                    "file1.txt"
+                                    file1)]
+        (t/wait-for-completion upload))
+      (let [local-contents (slurp file1)
+            s3-contents (s3/get-file-contents s3client
+                                              test-bucket
+                                              "file1.txt")]
+        (is (= (count local-contents) (count s3-contents)))
+        (is (= local-contents s3-contents))
+        (is (= local-contents "file for upload tests\n")))
+      (finally
+        (s3c/delete-objects! s3client test-bucket ["file1.txt"])))))
+
 (deftest all-files-downloaded?-test []
   (testing "put two files in s3, but don't download them yet. Should
 return false. Download one, should return false. Create the second one
