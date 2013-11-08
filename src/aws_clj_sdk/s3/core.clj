@@ -117,7 +117,7 @@ Otherwise, false."
 ;;; # Download town!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn get-file-contents [s3client bucket key]
+(defn file-contents [s3client bucket key]
   "Get the file corresponding to key, and return the body of the file"
   (c/object-contents s3client bucket key))
 

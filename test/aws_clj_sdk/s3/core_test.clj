@@ -49,7 +49,7 @@
 ;; # Download tests!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftest get-file-contents-test []
+(deftest file-contents-test []
   (testing "put a file in s3, get the file contents, and it should be equal to
 the contents of the file"
     (try
@@ -59,9 +59,9 @@ the contents of the file"
                                     file1)]
         (t/wait-for-completion upload))
       (let [local-contents (slurp file1)
-            s3-contents (s3/get-file-contents s3client
-                                              test-bucket
-                                              "file1.txt")]
+            s3-contents (s3/file-contents s3client
+                                          test-bucket
+                                          "file1.txt")]
         (is (= (count local-contents) (count s3-contents)))
         (is (= local-contents s3-contents))
         (is (= local-contents "file for upload tests\n")))
