@@ -2,7 +2,8 @@
   (:use clojure.java.io
         roxxi.utils.print
         roxxi.utils.collections)
-  (:import [com.amazonaws ClientConfiguration]
+  (:import [java.util Scanner]
+           [com.amazonaws ClientConfiguration]
            [com.amazonaws.auth AWSCredentials]
            [com.amazonaws.services.s3 AmazonS3Client]
            [com.amazonaws.services.s3.model
@@ -21,6 +22,8 @@
 
 
 (defprotocol S3Client
+  (object-contents [s3c bucket-name key]
+    "Gets the contents of the file at the specified key.")
   (object-metadata [s3c bucket-name key]
     "Gets the metadata for the specified Amazon S3
 object without actually fetching the object itself.")
@@ -59,6 +62,13 @@ from the specified bucket."))
 
 (extend-type AmazonS3Client
   S3Client
+  (object-contents [s3c bucket-name key]
+    (let [obj-in-mem (.getObject s3c bucket-name key)
+          input-stream (.getObjectContent obj-in-mem)
+          scanner (doto (Scanner. input-stream "UTF-8") (.useDelimiter "\\A"))]
+      (if (.hasNext scanner)
+        (.next scanner)
+        "")))
   (object-metadata [s3c bucket-name key]
     (.getObjectMetadata s3c bucket-name key))
   (list-objects-by-request [s3c list-objects-request]

@@ -1,6 +1,7 @@
 (ns aws-clj-sdk.auth.core-test
   (:require [clj-yaml.core :as yaml]
-            [aws-clj-sdk.auth.core :as auth]))
+            [aws-clj-sdk.auth.core :as auth])
+  (:use roxxi.utils.print))
 
 (def credential-file "conf/aws.yml")
 
